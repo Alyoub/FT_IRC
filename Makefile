@@ -3,10 +3,9 @@ CXX = c++
 CXXFLAGS = -std=c++98 -Wall -Wextra -Werror
 
 SRCS = main.cpp client.cpp server.cpp
-
 OBJS = $(SRCS:.cpp=.o)
 
-EXEC = ircserv
+EXEC = ScalarConverte
 
 all: $(EXEC)
 

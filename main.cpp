@@ -1,15 +1,21 @@
 #include "server.hpp"
+#include "client.hpp"
 
 
 
 
-int main(int ac, char **av)
+int main()
 {
-
-    if(ac > 2)
-    {
-        std::cout<<av[1]<<std::endl;
-    }
-    else
-        std::cerr<<"USAGE  : ./ircserv <port> <password> "<<std::endl;
+	server ser;
+	std::cout << "---- SERVER ----" << std::endl;
+	try{
+		signal(SIGINT, server::SignalHandler);
+		signal(SIGQUIT, server::SignalHandler);
+		ser.ServerInit();
+	}
+	catch(const std::exception& e){
+		ser.CloseFds();
+		std::cerr << e.what() << std::endl;
+	}
+	std::cout << "The Server Closed!" << std::endl;
 }
