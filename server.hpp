@@ -35,14 +35,14 @@ class server
 
         server();
 
-	    void ServerInit();
+	    void serverInit();
 	    void SerSocket();
-	    void AcceptNewClient();
+	    void AcceptNewclient();
 	    void ReceiveNewData(int fd);
 
-	    static void SignalHandler(int signum);
+	    static void signalHandler(int signum);
     
 	    void CloseFds();
-	    void ClearClients(int fd);
+	    void Clearclients(int fd);
 
 };

@@ -8,7 +8,7 @@ client::client(){}
 
 client::~client(){}
 
-int client::getFd()
+int client::getFD()
 {
     return this->FD;
 }

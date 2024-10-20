@@ -22,7 +22,7 @@ class client
     client();
     ~client();
 
-    int getFd();
+    int getFD();
 
     void setFD(int fd);
     void setIPadd(std::string ipadd);
