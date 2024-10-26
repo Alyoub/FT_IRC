@@ -1,141 +1,193 @@
-#include "server.hpp"
-#include "client.hpp"
+#include "Server.hpp"
 
 
 
 
-server::server()
+bool Server::Signal = false;
+
+Server::Server()
 {
-    this->ser_fd_socket = -1;
+    this->fd_soket = -1;
 }
 
+Server::~Server(){}
 
-void server::Clearclients(int fd){ //-> clear the clients
-	for(size_t i = 0; i < fds.size(); i++){ //-> remove the client from the pollfd
-		if (fds[i].fd == fd)
-			{fds.erase(fds.begin() + i); break;}
-	}
-	for(size_t i = 0; i < clients.size(); i++){ //-> remove the client from the vector of clients
-		if (clients[i].getFD() == fd)
-			{clients.erase(clients.begin() + i); break;}
-	}
-
-}
-
-bool server::signal = false; //-> initialize the static boolean
-void server::signalHandler(int signum)
+void Server::SignalHandler(int signum)
 {
-	(void)signum;
-	std::cout << std::endl << "signal Received!" << std::endl;
-	server::signal = true; //-> set the static boolean to true to stop the server
+    (void)signum;
+    std::cout<<std::endl<<GRE<<"---------->        SIGNAL RECIEVED        <----------"<<GRE<<std::endl;
+    Server::Signal = true;
 }
-
-void	server::CloseFds(){
-	for(size_t i = 0; i < clients.size(); i++){ //-> close all the clients
-		std::cout << RED << "client <" << clients[i].getFD() << "> Disconnected" << WHI << std::endl;
-		close(clients[i].getFD());
-	}
-	if (ser_fd_socket != -1){ //-> close the server socket
-		std::cout << RED << "server <" << ser_fd_socket << "> Disconnected" << WHI << std::endl;
-		close(ser_fd_socket);
-	}
-}
-
-void server::ReceiveNewData(int fd)
+void Server::closeFDS()
 {
-	char buff[1024]; //-> buffer for the received data
-	memset(buff, 0, sizeof(buff)); //-> clear the buffer
-
-	ssize_t bytes = recv(fd, buff, sizeof(buff) - 1 , 0); //-> receive the data
-
-	if(bytes <= 0){ //-> check if the client disconnected
-		std::cout << RED << "client <" << fd << "> Disconnected" << WHI << std::endl;
-		Clearclients(fd); //-> clear the client
-		close(fd); //-> close the client socket
-	}
-
-	else{ //-> print the received data
-		buff[bytes] = '\0';
-		std::cout << YEL << "client <" << fd << "> Data: " << WHI << buff;
-		//here you can add your code to process the received data: parse, check, authenticate, handle the command, etc...
-	}
+    for(size_t i = 0 ; i < clients.size(); i++)
+    {
+        std::cout<<RED<<"SERVER : CLIENT /"<<clients[i].getFD()<<"/ Disconnected"<<WHI<<std::endl;
+        close(clients[i].getFD());
+    }
+    if(fd_soket == -1)
+    {
+        std::cout<<RED<<"SERVER /"<<fd_soket<<"/  DISCONNECTED"<<WHI<<std::endl;
+        close(fd_soket);
+    }
+        
 }
 
-void server::AcceptNewclient()
-{
-	client cli; //-> create a new client
-	struct sockaddr_in cliadd;
-	struct pollfd NewPoll;
-	socklen_t len = sizeof(cliadd);
+void Server::Sersocket()
+{  
+    int option_value = 1;
+    struct sockaddr_in add;
 
-	int incofd = accept(ser_fd_socket, (sockaddr *)&(cliadd), &len); //-> accept the new client
-	if (incofd == -1)
-		{std::cout << "accept() failed" << std::endl; return;}
+    struct pollfd Npoll;
+    // struct pollfd newFd; // removed 
+   
 
-	if (fcntl(incofd, F_SETFL, O_NONBLOCK) == -1) //-> set the socket option (O_NONBLOCK) for non-blocking socket
-		{std::cout << "fcntl() failed" << std::endl; return;}
+    add.sin_family = AF_INET;
+    add.sin_port = htons(this->port);
+    add.sin_addr.s_addr = INADDR_ANY;
+   
+    fd_soket = socket(AF_INET, SOCK_STREAM, 0);
 
-	NewPoll.fd = incofd; //-> add the client socket to the pollfd
-	NewPoll.events = POLLIN; //-> set the event to POLLIN for reading data
-	NewPoll.revents = 0; //-> set the revents to 0
+    if(fd_soket == -1)
+    throw(std::runtime_error("-----> CANT CREAT A VALID SOKET <-----"));
+         
+    if(setsockopt(fd_soket, SOL_SOCKET, SO_REUSEADDR, &option_value, sizeof(option_value)) == -1)// setsockopt == set socket option
+        throw(std::runtime_error("-----> FAILED TO SET OPTION <SO_REUSEADDR> ON SOKET <-----"));
+    if(fcntl(fd_soket, F_SETFL, O_NONBLOCK) == -1)
+        throw(std::runtime_error("-----> FAILED TO SET OPTION <O_NONBLOCK> ON SOKET <-----"));
+   //bind then listen to this server so u can use it onw IP or the same port as befor
+   if(bind(fd_soket,(struct sockaddr *)&add, sizeof(add)) == -1)
+        throw(std::runtime_error("-----> FAILED TO BIND THE SOKET <-----"));
+    if(listen(fd_soket ,SOMAXCONN) == -1)
+        throw(std::runtime_error("-----> FAILED TO LISTEN ON SOCKET <-----"));
 
-	cli.setFD(incofd); //-> set the client file descriptor
-	cli.setIPadd(inet_ntoa((cliadd.sin_addr))); //-> convert the ip address to string and set it
-	clients.push_back(cli); //-> add the client to the vector of clients
-	fds.push_back(NewPoll); //-> add the client socket to the pollfd
 
-	std::cout << GRE << "client <" << incofd << "> Connected" << WHI << std::endl;
+    Npoll.fd = fd_soket; // chmn fd <socket> bari tminitori 
+    Npoll.events = POLLIN; // POLLIN mean that ur ready to read data 
+    Npoll.revents = 0;
+    fds.push_back(Npoll); //ADD THE INFO FROM THE NPOLL STRUCT TO THE FDS VECTORS
 }
 
-void server::SerSocket()
+
+
+void Server::ServerInit()
 {
-	int en = 1;
-	struct sockaddr_in add;
-	struct pollfd NewPoll;
-	add.sin_family = AF_INET; //-> set the address family to ipv4
-	add.sin_addr.s_addr = INADDR_ANY; //-> set the address to any local machine address
-	add.sin_port = htons(this->port); //-> convert the port to network byte order (big endian)
+   
+    this->port = 4444;
+    Sersocket();
 
-	ser_fd_socket = socket(AF_INET, SOCK_STREAM, 0); //-> create the server socket
-	if(ser_fd_socket == -1) //-> check if the socket is created
-		throw(std::runtime_error("faild to create socket"));
+    std::cout<<ORNG<<"----->        SERVER  /"<<fd_soket<<"/ CONNECTED        <------"<<WHI<<std::endl;
+    std::cout<<BLUE<<"          waitng to accept a conection        "<<WHI<<std::endl;
 
-	if(setsockopt(ser_fd_socket, SOL_SOCKET, SO_REUSEADDR, &en, sizeof(en)) == -1) //-> set the socket option (SO_REUSEADDR) to reuse the address
-		throw(std::runtime_error("faild to set option (SO_REUSEADDR) on socket"));
-	 if (fcntl(ser_fd_socket, F_SETFL, O_NONBLOCK) == -1) //-> set the socket option (O_NONBLOCK) for non-blocking socket
-		throw(std::runtime_error("faild to set option (O_NONBLOCK) on socket"));
-	if (bind(ser_fd_socket, (struct sockaddr *)&add, sizeof(add)) == -1) //-> bind the socket to the address
-		throw(std::runtime_error("faild to bind socket"));
-	if (listen(ser_fd_socket, SOMAXCONN) == -1) //-> listen for incoming connections and making the socket a passive socket
-		throw(std::runtime_error("listen() faild"));
-
-	NewPoll.fd = ser_fd_socket; //-> add the server socket to the pollfd
-	NewPoll.events = POLLIN; //-> set the event to POLLIN for reading data
-	NewPoll.revents = 0; //-> set the revents to 0
-	fds.push_back(NewPoll); //-> add the server socket to the pollfd
+    while(Server::Signal == false)
+    {
+        if((poll(&fds[0],fds.size(),-1) == -1) && Server::Signal == false) //-> wait for an event
+            throw(std::runtime_error("------> ERROR IN POLL <------"));
+        for(size_t i = 0; i < fds.size(); i++)
+        {
+            if(fds[i].revents & POLLIN) // check for data to read
+            {
+                if(fds[i].fd == fd_soket)
+                    AcceptNewclient();
+                else
+                    ReceiveNewData(fds[i].fd);
+            }
+        }
+    }
+    closeFDS();
 }
 
-void server::serverInit()
+
+void Server::AcceptNewclient()
 {
-	this->port = 4444;
-	SerSocket(); //-> create the server socket
+   client New_client;
 
-	std::cout << GRE << "server <" << ser_fd_socket << "> Connected" << WHI << std::endl;
-	std::cout << "Waiting to accept a connection...\n";
+   struct sockaddr_in add_client;
+   struct pollfd New_poll;
 
-	while (server::signal == false){ //-> run the server until the signal is received
+   socklen_t len_socket = sizeof(add_client);
 
-		if((poll(&fds[0],fds.size(),-1) == -1) && server::signal == false) //-> wait for an event
-			throw(std::runtime_error("poll() faild"));
+    int accept_clinet = accept(fd_soket, (sockaddr *)&(add_client), &len_socket);
 
-		for (size_t i = 0; i < fds.size(); i++){ //-> check all file descriptors
-			if (fds[i].revents & POLLIN){ //-> check if there is data to read
-				if (fds[i].fd == ser_fd_socket)
-					AcceptNewclient(); //-> accept new client
-				else
-					ReceiveNewData(fds[i].fd); //-> receive new data from a registered client
-			}
-		}
-	}
-	CloseFds(); //-> close the file descriptors when the server stops
+    if(accept_clinet  == - 1)
+        std::cout<<RED<<"----------> ACCEPT FAILED <----------"<<WHI<<std::endl; // used for TCP ---> Transmission Control Protocol
+    if(fcntl(accept_clinet, F_SETFL, O_NONBLOCK) == -1)
+        throw(std::runtime_error("----->  FAILED TO SET OPTION <O_NONBLOCK> ON SOKET <-----"));
+
+    New_poll.fd = accept_clinet;
+    New_poll.events = POLLIN; // ready to start rading data 
+    New_poll.revents = 0;
+
+    New_client.setFD(accept_clinet);
+    New_client.setIPadd(inet_ntoa(add_client.sin_addr)); // convert the ip to readable string
+    clients.push_back(New_client); //add the client to the vector of clients
+    fds.push_back(New_poll); // add the client socket to the struct pollfd
+    
+
+    std::cout<<GRE<<"------>        CLIENT <"<<accept_clinet<<"> CONNECTED        <------"<<WHI<<std::endl;
+   
+}
+void Server::ReceiveNewData(int fd)
+{
+    char buffer[1024]; // 1024 bytes 1Kb 
+    memset(buffer, 0, sizeof(buffer)); // clear the buffer so i can evoid any leaks/erorrs 
+
+    ssize_t bytes = recv(fd, buffer, sizeof(buffer), 0);//The recv method is essential for receiving data in a network socket programming
+
+    if(bytes <= 0)
+    {
+        std::cout<<RED<<"------>        CLIENT <"<<fd<<"> DISCONNECTED        <------"<<WHI<<std::endl;
+        Clearclients(fd);
+        close(fd);
+    }
+    else
+    {
+        std::string get_time = getCurrentTime();
+        buffer[bytes] = '\0';
+        Msg_resv();
+        std::cout<<GRE<<" CLIENT <"<<fd<<"> :: "<<WHI<<buffer;
+       
+
+        // here to check for commands 
+
+    }
+        
+}
+
+void Server::Clearclients(int fd)
+{
+    for(size_t i = 0; i < fds.size(); i++) // remove client from the pollfd struct 
+    {
+        if(fds[i].fd == fd)
+        {
+            fds.erase(fds.begin() + i);
+            break;
+        }
+    }
+    for(size_t i = 0; i < fds.size();i++) // remove client from the clients vector 
+    {
+        if(clients[i].getFD() == fd )
+        {
+            clients.erase(clients.begin() + i);
+            break;
+        }
+    }
+}
+
+std::string Server::getCurrentTime()
+{
+    std::time_t now = std::time(0); // Get current time as a time_t object
+    std::tm *ltm = std::localtime(&now); // Convert to local time
+
+    char buffer[80];
+    // Format: HH:MM:SS
+    std::strftime(buffer, sizeof(buffer), "%H:%M", ltm);
+    return std::string(buffer);
+}
+
+void Server::Msg_resv()
+{
+    std::string get_time = getCurrentTime();
+
+    std::cout <<YEL<< " [" << get_time << "]"<<WHI;
 }

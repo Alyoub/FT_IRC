@@ -2,10 +2,10 @@ CXX = c++
 
 CXXFLAGS = -std=c++98 -Wall -Wextra -Werror
 
-SRCS = main.cpp client.cpp server.cpp
+SRCS = main.cpp client.cpp Server.cpp
 OBJS = $(SRCS:.cpp=.o)
 
-EXEC = ScalarConverte
+EXEC = IRC
 
 all: $(EXEC)
 

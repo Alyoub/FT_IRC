@@ -3,29 +3,29 @@
 
 
 
-
-#include "server.hpp"
+#include "Server.hpp"
 
 
 
 
 class client
 {
-    private :
+    private:
+
         int FD;
-        std::string IPadd;
+        std::string addIP;
+    
 
 
 
 
     public :
-    client();
-    ~client();
 
     int getFD();
-
     void setFD(int fd);
     void setIPadd(std::string ipadd);
+
+
 
 
 };
