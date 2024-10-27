@@ -22,12 +22,17 @@ void Server::closeFDS()
 {
     for(size_t i = 0 ; i < clients.size(); i++)
     {
-        std::cout<<RED<<"SERVER : CLIENT /"<<clients[i].getFD()<<"/ Disconnected"<<WHI<<std::endl;
+        int  xp = clients[i].getFD();
+        xp -= 3; // xp add xp just to make it easy for user
+
+        // std::cout<<RED<<"SERVER : CLIENT <"<<clients[i].getFD()<<"> Disconnected"<<WHI<<std::endl;
+        std::cout<<RED<<"SERVER : CLIENT <"<<xp<<"> Disconnected"<<WHI<<std::endl;
         close(clients[i].getFD());
     }
     if(fd_soket == -1)
     {
-        std::cout<<RED<<"SERVER /"<<fd_soket<<"/  DISCONNECTED"<<WHI<<std::endl;
+        fd_soket -= 3;
+        std::cout<<RED<<"SERVER <"<<fd_soket<<">  DISCONNECTED"<<WHI<<std::endl;
         close(fd_soket);
     }
         
@@ -73,10 +78,11 @@ void Server::Sersocket()
 void Server::ServerInit()
 {
    
-    this->port = 4444;
+
+    this->port = 8080;
     Sersocket();
 
-    std::cout<<ORNG<<"----->        SERVER  /"<<fd_soket<<"/ CONNECTED        <------"<<WHI<<std::endl;
+    std::cout<<ORNG<<"----->        SERVER      CONNECTED        <------"<<WHI<<std::endl;
     std::cout<<BLUE<<"          waitng to accept a conection        "<<WHI<<std::endl;
 
     while(Server::Signal == false)
@@ -120,10 +126,11 @@ void Server::AcceptNewclient()
 
     New_client.setFD(accept_clinet);
     New_client.setIPadd(inet_ntoa(add_client.sin_addr)); // convert the ip to readable string
+    
     clients.push_back(New_client); //add the client to the vector of clients
     fds.push_back(New_poll); // add the client socket to the struct pollfd
     
-
+    accept_clinet -= 3;
     std::cout<<GRE<<"------>        CLIENT <"<<accept_clinet<<"> CONNECTED        <------"<<WHI<<std::endl;
    
 }
@@ -134,10 +141,13 @@ void Server::ReceiveNewData(int fd)
 
     ssize_t bytes = recv(fd, buffer, sizeof(buffer), 0);//The recv method is essential for receiving data in a network socket programming
 
+    int counter = 0;
     if(bytes <= 0)
     {
-        std::cout<<RED<<"------>        CLIENT <"<<fd<<"> DISCONNECTED        <------"<<WHI<<std::endl;
-        Clearclients(fd);
+        counter =fd;
+        counter -= 3;
+        std::cout<<RED<<"------>        CLIENT <"<<counter<<"> DISCONNECTED        <------"<<WHI<<std::endl;
+        Clearclients(fd); // fd client  i added counter here just to khow the number of clients <ID>
         close(fd);
     }
     else
@@ -145,6 +155,7 @@ void Server::ReceiveNewData(int fd)
         std::string get_time = getCurrentTime();
         buffer[bytes] = '\0';
         Msg_resv();
+        fd -=3;
         std::cout<<GRE<<" CLIENT <"<<fd<<"> :: "<<WHI<<buffer;
        
 
@@ -181,7 +192,7 @@ std::string Server::getCurrentTime()
 
     char buffer[80];
     // Format: HH:MM:SS
-    std::strftime(buffer, sizeof(buffer), "%H:%M", ltm);
+    std::strftime(buffer, sizeof(buffer), "%H:%M:%S", ltm);
     return std::string(buffer);
 }
 

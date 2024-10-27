@@ -20,3 +20,4 @@ int main()
 	 std::cout<<BLUE<<"------------->        Server  Closed        <------------- "<<BLUE<<std::endl;
 }
 
+//run as client   localhost : 127.0.0.1  port : 4444 
