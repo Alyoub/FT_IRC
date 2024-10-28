@@ -26,13 +26,18 @@ void Server::closeFDS()
         xp -= 3; // xp add xp just to make it easy for user
 
         // std::cout<<RED<<"SERVER : CLIENT <"<<clients[i].getFD()<<"> Disconnected"<<WHI<<std::endl;
-        std::cout<<RED<<"SERVER : CLIENT <"<<xp<<"> Disconnected"<<WHI<<std::endl;
+
+        std::cout<<RED<<"SERVER : CLIENT <"<<xp<<"> DISCONNECTED AT ";
+        Msg_resv();
+        std::cout<<"\n"<<WHI;
         close(clients[i].getFD());
     }
     if(fd_soket == -1)
     {
         fd_soket -= 3;
-        std::cout<<RED<<"SERVER <"<<fd_soket<<">  DISCONNECTED"<<WHI<<std::endl;
+        std::cout<<RED<<"SERVER <"<<fd_soket<<">  DISCONNECTED AT";
+        Msg_resv();
+        std::cout<<"\n"<<WHI;
         close(fd_soket);
     }
         
@@ -49,7 +54,7 @@ void Server::Sersocket()
 
     add.sin_family = AF_INET;
     add.sin_port = htons(this->port);
-    add.sin_addr.s_addr = INADDR_ANY;
+    add.sin_addr.s_addr = INADDR_ANY; 
    
     fd_soket = socket(AF_INET, SOCK_STREAM, 0);
 
@@ -83,7 +88,7 @@ void Server::ServerInit()
     Sersocket();
 
     std::cout<<ORNG<<"----->        SERVER      CONNECTED        <------"<<WHI<<std::endl;
-    std::cout<<BLUE<<"          waitng to accept a conection        "<<WHI<<std::endl;
+    std::cout<<BLUE<<"          waitng to accept a connection        "<<WHI<<std::endl;
 
     while(Server::Signal == false)
     {
@@ -118,7 +123,7 @@ void Server::AcceptNewclient()
     if(accept_clinet  == - 1)
         std::cout<<RED<<"----------> ACCEPT FAILED <----------"<<WHI<<std::endl; // used for TCP ---> Transmission Control Protocol
     if(fcntl(accept_clinet, F_SETFL, O_NONBLOCK) == -1)
-        throw(std::runtime_error("----->  FAILED TO SET OPTION <O_NONBLOCK> ON SOKET <-----"));
+        throw(std::runtime_error("----->  FAILED TO SET OPTION <O_NONBLOCK> ON SOKET <-----")); // runtime error throw
 
     New_poll.fd = accept_clinet;
     New_poll.events = POLLIN; // ready to start rading data 
@@ -131,7 +136,10 @@ void Server::AcceptNewclient()
     fds.push_back(New_poll); // add the client socket to the struct pollfd
     
     accept_clinet -= 3;
-    std::cout<<GRE<<"------>        CLIENT <"<<accept_clinet<<"> CONNECTED        <------"<<WHI<<std::endl;
+    std::cout<<GRE<<"------>        CLIENT <"<<accept_clinet<<"> CONNECTED AT";
+    Msg_resv();
+    std::cout<<GRE<<"        <------\n"<<WHI;
+
    
 }
 void Server::ReceiveNewData(int fd)
@@ -146,7 +154,9 @@ void Server::ReceiveNewData(int fd)
     {
         counter =fd;
         counter -= 3;
-        std::cout<<RED<<"------>        CLIENT <"<<counter<<"> DISCONNECTED        <------"<<WHI<<std::endl;
+        std::cout<<RED<<"------>        CLIENT <"<<counter<<"> DISCONNECTED AT";
+        Msg_resv();
+        std::cout<<"        <------\n"<<WHI;
         Clearclients(fd); // fd client  i added counter here just to khow the number of clients <ID>
         close(fd);
     }
@@ -192,7 +202,7 @@ std::string Server::getCurrentTime()
 
     char buffer[80];
     // Format: HH:MM:SS
-    std::strftime(buffer, sizeof(buffer), "%H:%M:%S", ltm);
+    std::strftime(buffer, sizeof(buffer), "<%H:%M>", ltm);
     return std::string(buffer);
 }
 
@@ -200,5 +210,5 @@ void Server::Msg_resv()
 {
     std::string get_time = getCurrentTime();
 
-    std::cout <<YEL<< " [" << get_time << "]"<<WHI;
+    std::cout << " [" << get_time << "]";
 }
